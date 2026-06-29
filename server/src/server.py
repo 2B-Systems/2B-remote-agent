@@ -14,17 +14,27 @@ CLIENT_SOCKET, CLIENT_ADDRESS = sock.accept()
 if CLIENT_SOCKET:
     print(f'Connection Established!\nClient Address: {CLIENT_ADDRESS}\nTime: {datetime.datetime.now()}')
 
+BYTES_LIST = []
+
 while CLIENT_SOCKET:
 
     CLIENT_BYTES = CLIENT_SOCKET.recv(1024)
 
-    BYTES_LIST = []
+    if CLIENT_BYTES == b'':
+        print('Client disconnected.')
+        break
 
-    BYTES_RECEIVED_W_TIME = {
+    BYTES_RECEIVED_W_METADATA = {
         'agent_address' : CLIENT_ADDRESS,
         'time' : datetime.datetime.now(),
         'bytes_data': CLIENT_BYTES,
         'client_message' : CLIENT_BYTES.decode()
                              }
 
-    BYTES_LIST.append(BYTES_RECEIVED_W_TIME)
+
+    print(BYTES_RECEIVED_W_METADATA)
+
+    BYTES_LIST.append(BYTES_RECEIVED_W_METADATA)
+
+CLIENT_SOCKET.close()
+sock.close()
