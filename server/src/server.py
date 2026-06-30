@@ -1,40 +1,43 @@
 import socket
 import datetime
 
-SERVER_IP = '127.0.0.1'
-SERVER_PORT = 8080
+# set the server address
+SERVER_IP, SERVER_PORT = '127.0.0.1', 8080
 SERVER_ADDRESS = (SERVER_IP, SERVER_PORT)
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# init TCP server
+SERVER_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-sock.bind(SERVER_ADDRESS)
-sock.listen()
+# start server
+SERVER_SOCKET.bind(SERVER_ADDRESS)
+SERVER_SOCKET.listen()
 
-CLIENT_SOCKET, CLIENT_ADDRESS = sock.accept()
+# start connection
+CLIENT_SOCKET, CLIENT_ADDRESS = SERVER_SOCKET.accept()
 if CLIENT_SOCKET:
     print(f'Connection Established!\nClient Address: {CLIENT_ADDRESS}\nTime: {datetime.datetime.now()}')
 
-BYTES_LIST = []
+# get values /w record
+received_messages_list = []
 
 while CLIENT_SOCKET:
 
-    CLIENT_BYTES = CLIENT_SOCKET.recv(1024)
+    client_bytes = CLIENT_SOCKET.recv(1024)
 
-    if CLIENT_BYTES == b'':
+    if client_bytes == b'':
         print('Client disconnected.')
         break
 
-    BYTES_RECEIVED_W_METADATA = {
+    bytes_received_w_record = {
         'agent_address' : CLIENT_ADDRESS,
         'time' : datetime.datetime.now(),
-        'bytes_data': CLIENT_BYTES,
-        'client_message' : CLIENT_BYTES.decode()
+        'client_message' : client_bytes.decode()
                              }
 
 
-    print(BYTES_RECEIVED_W_METADATA)
+    print(bytes_received_w_record)
 
-    BYTES_LIST.append(BYTES_RECEIVED_W_METADATA)
+    received_messages_list.append(bytes_received_w_record)
 
 CLIENT_SOCKET.close()
-sock.close()
+SERVER_SOCKET.close()
