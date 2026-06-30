@@ -1,43 +1,59 @@
-import socket
+import asyncio
 import datetime
+import pathlib
 
 # set the server address
 SERVER_IP, SERVER_PORT = '127.0.0.1', 8080
 SERVER_ADDRESS = (SERVER_IP, SERVER_PORT)
 
-# init TCP server
-SERVER_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# client coroutine
+async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
 
-# start server
-SERVER_SOCKET.bind(SERVER_ADDRESS)
-SERVER_SOCKET.listen()
+    # get the client address
+    CLIENT_ADDRESS = writer.get_extra_info('peername')
+    CLIENT_IP, CLIENT_PORT = CLIENT_ADDRESS
 
-# start connection
-CLIENT_SOCKET, CLIENT_ADDRESS = SERVER_SOCKET.accept()
-if CLIENT_SOCKET:
-    print(f'Connection Established!\nClient Address: {CLIENT_ADDRESS}\nTime: {datetime.datetime.now()}')
+    print(f'Client successfully connected.\nClient Address: {CLIENT_ADDRESS}')
 
-# get values /w record
-received_messages_list = []
+    # log folder operations
+    folder_for_client = pathlib.Path(f'server/logs/{CLIENT_IP}_{CLIENT_PORT}')
 
-while CLIENT_SOCKET:
+    if not folder_for_client.exists():
+        folder_for_client.mkdir()
+    else:
+        print('Log directory exists, skipping folder creations...')
 
-    client_bytes = CLIENT_SOCKET.recv(1024)
+    # get values /w record
+    while True:
 
-    if client_bytes == b'':
-        print('Client disconnected.')
-        break
+        client_bytes = await reader.read(1024)
 
-    bytes_received_w_record = {
-        'agent_address' : CLIENT_ADDRESS,
-        'time' : datetime.datetime.now(),
-        'client_message' : client_bytes.decode()
-                             }
+        if not client_bytes:
+            print('Client disconnected.')
+            break
+
+        bytes_received_w_record = {
+            'time' : datetime.datetime.now(),
+            'client_message' : client_bytes.decode()
+                                 }
+
+        current_byte_time, current_byte_message = bytes_received_w_record['time'],bytes_received_w_record['client_message']
+
+        print(f'[{current_byte_time}] Client Message: {current_byte_message}')
+
+    # close connection
+    writer.close()
+    await writer.wait_closed()
 
 
-    print(bytes_received_w_record)
+async def main():
+    # server init
+    server = await asyncio.start_server(handle_client, SERVER_IP, SERVER_PORT)
 
-    received_messages_list.append(bytes_received_w_record)
+    print(f'Server is listening to {SERVER_IP}:{SERVER_PORT}')
 
-CLIENT_SOCKET.close()
-SERVER_SOCKET.close()
+    await server.serve_forever()
+    server.close()
+    await server.wait_closed()
+
+asyncio.run(main())
