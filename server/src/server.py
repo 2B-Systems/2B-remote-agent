@@ -17,7 +17,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
 
     # log folder operations
     # FIXME handle exceptions for folder creations
-    folder_for_client = pathlib.Path(f'server/logs/{CLIENT_IP}_{CLIENT_PORT}')
+    folder_for_client = pathlib.Path(f'server/src/logs/{CLIENT_IP}_{CLIENT_PORT}')
 
     if not folder_for_client.exists():
         folder_for_client.mkdir()
@@ -40,13 +40,13 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
 
         current_byte_time, current_byte_message = bytes_received_w_record['time'],bytes_received_w_record['client_message']
 
-        # save to JSON
-        information_to_save_to_json = f'[{current_byte_time}] Client Message: {current_byte_message}'
+        # save to file
+        information_to_save_to_file = f'[{current_byte_time}] Client Message: {current_byte_message}'
 
         with open(f'{folder_for_client}/events.log', 'a') as log_file:
-            log_file.write(information_to_save_to_json)
+            log_file.write(information_to_save_to_file)
 
-        print(information_to_save_to_json)
+        print(information_to_save_to_file)
 
     # close connection
     writer.close()
@@ -60,6 +60,7 @@ async def main():
     print(f'Server is listening to {SERVER_IP}:{SERVER_PORT}')
 
     await server.serve_forever()
+
     server.close()
     await server.wait_closed()
 
