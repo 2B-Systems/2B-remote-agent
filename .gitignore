@@ -1,1 +1,7 @@
 server/src/logs/127.0.0.1_48142/events.log
+server/src/__pycache__
+server/src/tests/__pycache__
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json

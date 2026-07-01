@@ -1,10 +1,8 @@
+
+from src.config import SERVER_IP, SERVER_PORT
 import asyncio
 import datetime
 import pathlib
-
-# set the server address
-SERVER_IP, SERVER_PORT = '127.0.0.1', 8080
-SERVER_ADDRESS = (SERVER_IP, SERVER_PORT)
 
 # client coroutine
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -64,4 +62,7 @@ async def main():
     server.close()
     await server.wait_closed()
 
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    print("\nSimulator stopped.")
