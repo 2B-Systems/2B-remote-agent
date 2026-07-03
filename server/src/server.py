@@ -3,6 +3,7 @@ from src.config import SERVER_IP, SERVER_PORT
 import asyncio
 import datetime
 import pathlib
+import aiofiles
 
 # client coroutine
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -14,13 +15,9 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
     print(f'Client successfully connected.\nClient Address: {CLIENT_ADDRESS}')
 
     # log folder operations
-    # FIXME handle exceptions for folder creations
-    folder_for_client = pathlib.Path(f'server/src/logs/{CLIENT_IP}_{CLIENT_PORT}')
-
-    if not folder_for_client.exists():
-        folder_for_client.mkdir()
-    else:
-        print('Log directory exists, skipping folder creations...')
+    folder_for_client = pathlib.Path(__file__).parent
+    
+    folder_for_client.mkdir(parents = True, exist_ok = True)
 
     # get values /w record
     while True:
@@ -39,10 +36,10 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         current_byte_time, current_byte_message = bytes_received_w_record['time'],bytes_received_w_record['client_message']
 
         # save to file
-        information_to_save_to_file = f'[{current_byte_time}] Client Message: {current_byte_message}'
+        information_to_save_to_file = f'[{current_byte_time}] Client Message: {current_byte_message}\n'
 
-        with open(f'{folder_for_client}/events.log', 'a') as log_file:
-            log_file.write(information_to_save_to_file)
+        async with aiofiles.open(f'{folder_for_client}/events.log', 'a') as log_file:
+            await log_file.write(information_to_save_to_file)
 
         print(information_to_save_to_file)
 
@@ -62,7 +59,8 @@ async def main():
     server.close()
     await server.wait_closed()
 
-try:
-    asyncio.run(main())
-except KeyboardInterrupt:
-    print("\nSimulator stopped.")
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nSimulator stopped.")

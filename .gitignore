@@ -5,3 +5,4 @@ server/src/tests/__pycache__
 !.vscode/settings.json
 !.vscode/launch.json
 !.vscode/extensions.json
+server/src/events.log
