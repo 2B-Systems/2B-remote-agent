@@ -28,11 +28,8 @@ int replication() {
 
 				if (copyResult) {
 					printf("Replication Successful! Path: %s\n\n", destinationPath);
-					static int i = 0;
-					if (i == 0) {
 						persistence(destinationPath);
-					}
-					i++;
+						break;
 				}
 			}
 		}
