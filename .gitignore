@@ -6,3 +6,4 @@ server/src/tests/__pycache__
 !.vscode/launch.json
 !.vscode/extensions.json
 server/src/events.log
+server/__pycache__/run_server.cpython-313.pyc
