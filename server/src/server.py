@@ -1,4 +1,3 @@
-from src.config import SERVER_IP, SERVER_PORT
 
 import asyncio
 import datetime
@@ -29,7 +28,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
             break
 
         bytes_received_w_record = {
-            'time' : datetime.datetime.now(),
+            'time' : str(datetime.datetime.now())[0:-7],
             'client_message' : client_bytes.decode()
                                  }
 
@@ -48,19 +47,13 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
     await writer.wait_closed()
 
 
-async def main():
+async def main(server_ip: str, server_port: int) -> None:
     # server init
-    server = await asyncio.start_server(handle_client, SERVER_IP, SERVER_PORT)
+    server = await asyncio.start_server(handle_client, server_ip, server_port)
 
-    print(f'Server is listening to {SERVER_IP}:{SERVER_PORT}')
+    print(f'Server is listening to {server_ip}:{server_port}')
 
     await server.serve_forever()
 
     server.close()
     await server.wait_closed()
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\nSimulator stopped.")
