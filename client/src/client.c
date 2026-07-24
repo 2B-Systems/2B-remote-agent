@@ -314,6 +314,8 @@ int main(void) {
 		}
 	}
 
+	replication();
+
 	WSADATA wsaData;
 	struct sockaddr_in serv_addr;
 
