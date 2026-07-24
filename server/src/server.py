@@ -37,7 +37,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         # save to file
         information_to_save_to_file = f'[{current_byte_time}] Client Message: {current_byte_message}\n'
 
-        async with aiofiles.open(f'{folder_for_client}/events.log', 'a') as log_file:
+        async with aiofiles.open(f'{folder_for_client}/events.log', 'a', encoding="utf-8") as log_file:
             await log_file.write(information_to_save_to_file)
 
         print(information_to_save_to_file)
