@@ -1,2 +1,3 @@
-# 2B-remote-agent
-Advanced remote system management framework featuring an asynchronous C agent and scalable Python telemetry listener.
+Developed by 2B Systems
+Product Name: 2B Remote Agent
+Product Version: T-44 Beta
