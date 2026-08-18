@@ -1,3 +1,5 @@
+<img width="1000" height="231" alt="Animated GIF Upload Fit   Fill" src="https://github.com/user-attachments/assets/bde80a9a-3951-4321-8d80-d30b86a946aa" />
+
 > **⚠️ Disclaimer & Security Notice**
 > **2B-remote-agent** is an experimental educational and research project built for low-level systems programming practice. It includes keyboard event capture functionality (`WH_KEYBOARD_LL`).
 > **Do not install or run this software on systems you do not own or administer, or without explicit authorization.** It lacks encryption, authentication, and security hardening, making it unsafe for production or public networks.
