@@ -10,8 +10,10 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-#define IP_LEN 16
-#define PORT_BUFFER_LEN 10
+#define IP_LEN 20 
+#define PORT_BUFFER_LEN 12
+#define INPUT_BUFFER_LEN 100
+// More byte for memory alignment, tolerance and future.
 
 #define BUFFER_SIZE 1024
 
@@ -254,63 +256,103 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
+int get_safe_string(char *buffer, int max_len) {
+	if (fgets(buffer, max_len, stdin) == NULL) {
+		return -1;
+	}
+
+	if (strchr(buffer, '\n') == NULL) {
+		int c;
+		while ((c = getchar()) != '\n' && c != EOF);
+		return 0;
+	}
+
+	buffer[strcspn(buffer, "\n")] = '\0';
+	return 1;
+}
+
 int main(void) {
 
-	char SERVER_IP[IP_LEN];
+	char SERVER_IP[IP_LEN] = "127.0.0.1"; // Default IP (Loopback Address for IPv4 Family / localhost)
+	u_short SERVER_PORT = 8080; // Default Port, u_short (unsigned short) is default data type for htons and htonl functions.
+
 	char port_buffer[PORT_BUFFER_LEN];
-	char input_buffer[100];
-	int SERVER_PORT;
+	char input_buffer[INPUT_BUFFER_LEN];
 	int valid = 0;
 
 	while (!valid) {
 		printf("Press Enter to continue with default IP and port (127.0.0.1:8080), or type 'custom' to enter manually: ");
 
-		if (fgets(input_buffer, sizeof(input_buffer), stdin) != NULL) {
-			input_buffer[strcspn(input_buffer, "\n")] = '\0';
+		int status = get_safe_string(input_buffer, sizeof(input_buffer));
 
-			if (input_buffer[0] == '\0') {
-				snprintf(SERVER_IP, sizeof(SERVER_IP), "127.0.0.1");
-				SERVER_PORT = 8080;
-				valid = 1;
-			}
-			else if (strcmp(input_buffer, "custom") == 0) {
-				int ip_valid = 0;
-				while (!ip_valid) {
-					printf("\nEnter Server IP Address: ");
-					if (fgets(SERVER_IP, sizeof(SERVER_IP), stdin) != NULL) {
-						SERVER_IP[strcspn(SERVER_IP, "\n")] = '\0';
+		if (status == -1) {
+			printf("\nInput cancelled. Exiting...\n");
+			return 1;
+		}
+		else if (status == 0) {
+			printf("\nError: Input is too long! Please try again.\n\n");
+			continue;
+		}
 
-						struct in_addr sa;
-						if (inet_pton(AF_INET, SERVER_IP, &sa) == 1) {
-							ip_valid = 1;
-						}
-						else {
-							printf("\nError: Invalid IP address format! Please try again.");
-						}
-					}
+		if (input_buffer[0] == '\0') {
+			valid = 1;
+		}
+		else if (strcmp(input_buffer, "custom") == 0) {
+
+			int ip_valid = 0;
+			while (!ip_valid) {
+				printf("\nEnter Server IP Address: ");
+
+				int ip_status = get_safe_string(SERVER_IP, sizeof(SERVER_IP));
+
+				if (ip_status == -1) {
+					printf("\nInput cancelled. Exiting...\n");
+					return 1;
+				}
+				else if (ip_status == 0) {
+					printf("\nError: Input is too long for an IP address! Please try again.\n");
+					continue;
 				}
 
-				int port_valid = 0;
-				while (!port_valid) {
-					printf("Enter Server Port (1-65535): ");
-					if (fgets(port_buffer, sizeof(port_buffer), stdin) != NULL) {
-						char *endptr;
-						long val = strtol(port_buffer, &endptr, 10);
-
-						if (endptr != port_buffer && (*endptr == '\n' || *endptr == '\0') && (val >= 1 && val <= 65535)) {
-							SERVER_PORT = (int)val;
-							port_valid = 1;
-							valid = 1;
-						}
-						else {
-							printf("\nError: Invalid port number! Must be an integer between 1 and 65535.");
-						}
-					}
+				struct in_addr sa;
+				if (inet_pton(AF_INET, SERVER_IP, &sa) == 1) {
+					ip_valid = 1;
+				}
+				else {
+					printf("\nError: Invalid IP address format! Please try again.");
 				}
 			}
-			else {
-				printf("Error: Unknown command. Please press Enter or type 'custom'.\n\n");
+
+			int port_valid = 0;
+			while (!port_valid) {
+				printf("Enter Server Port (1-65535): ");
+
+				int port_status = get_safe_string(port_buffer, sizeof(port_buffer));
+
+				if (port_status == -1) {
+					printf("\nInput cancelled. Exiting...\n");
+					return 1;
+				}
+				else if (port_status == 0) {
+					printf("\nError: Input is too long for a port number! Please try again.\n");
+					continue;
+				}
+
+				char *endptr;
+				long val = strtol(port_buffer, &endptr, 10);
+
+				if (endptr != port_buffer && *endptr == '\0' && (val >= 1 && val <= 65535)) {
+					SERVER_PORT = (u_short)val;
+					port_valid = 1;
+					valid = 1;
+				}
+				else {
+					printf("\nError: Invalid port number! Must be an integer between 1 and 65535.\n");
+				}
 			}
+		}
+		else {
+			printf("Error: Unknown command. Please press Enter or type 'custom'.\n\n");
 		}
 	}
 
