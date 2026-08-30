@@ -15,6 +15,12 @@
 #define INPUT_BUFFER_LEN 100
 // More byte for memory alignment, tolerance and future.
 
+typedef enum {
+	INPUT_CANCELED = -1,
+	INPUT_SUCCESS = 0,
+	INPUT_TOO_LONG = 1
+} InputStatus;
+
 #define BUFFER_SIZE 1024
 
 SOCKET sock = INVALID_SOCKET;
@@ -256,40 +262,28 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
-int get_safe_string(char *buffer, int max_len) {
-	if (fgets(buffer, max_len, stdin) == NULL) {
-		return -1;
-	}
-
-	if (strchr(buffer, '\n') == NULL) {
-		int c;
-		while ((c = getchar()) != '\n' && c != EOF);
-		return 0;
-	}
-
-	buffer[strcspn(buffer, "\n")] = '\0';
-	return 1;
-}
+InputStatus get_string(char *buffer, int max_len);
+int get_custom_ip(char *ip);
+int get_custom_port(u_short *port);
 
 int main(void) {
 
-	char SERVER_IP[IP_LEN] = "127.0.0.1"; // Default IP (Loopback Address for IPv4 Family / localhost)
-	u_short SERVER_PORT = 8080; // Default Port, u_short (unsigned short) is default data type for htons and htonl functions.
+	char SERVER_IP[IP_LEN] = "127.0.0.1";
+	u_short SERVER_PORT = 8080;
 
-	char port_buffer[PORT_BUFFER_LEN];
 	char input_buffer[INPUT_BUFFER_LEN];
 	int valid = 0;
 
 	while (!valid) {
 		printf("Press Enter to continue with default IP and port (127.0.0.1:8080), or type 'custom' to enter manually: ");
 
-		int status = get_safe_string(input_buffer, sizeof(input_buffer));
+		int input_ret = get_string(input_buffer, sizeof(input_buffer));
 
-		if (status == -1) {
-			printf("\nInput cancelled. Exiting...\n");
-			return 1;
+		if (input_ret == INPUT_CANCELED) {
+			printf("\nInput canceled. Exiting...\n");
+			return EXIT_FAILURE;
 		}
-		else if (status == 0) {
+		else if (input_ret == INPUT_TOO_LONG) {
 			printf("\nError: Input is too long! Please try again.\n\n");
 			continue;
 		}
@@ -298,58 +292,18 @@ int main(void) {
 			valid = 1;
 		}
 		else if (strcmp(input_buffer, "custom") == 0) {
+			int ip_ret = get_custom_ip(SERVER_IP);
 
-			int ip_valid = 0;
-			while (!ip_valid) {
-				printf("\nEnter Server IP Address: ");
-
-				int ip_status = get_safe_string(SERVER_IP, sizeof(SERVER_IP));
-
-				if (ip_status == -1) {
-					printf("\nInput cancelled. Exiting...\n");
-					return 1;
-				}
-				else if (ip_status == 0) {
-					printf("\nError: Input is too long for an IP address! Please try again.\n");
-					continue;
-				}
-
-				struct in_addr sa;
-				if (inet_pton(AF_INET, SERVER_IP, &sa) == 1) {
-					ip_valid = 1;
-				}
-				else {
-					printf("\nError: Invalid IP address format! Please try again.");
-				}
+			if (ip_ret == INPUT_CANCELED) {
+				return EXIT_FAILURE;
 			}
 
-			int port_valid = 0;
-			while (!port_valid) {
-				printf("Enter Server Port (1-65535): ");
+			int port_ret = get_custom_port(&SERVER_PORT);
 
-				int port_status = get_safe_string(port_buffer, sizeof(port_buffer));
-
-				if (port_status == -1) {
-					printf("\nInput cancelled. Exiting...\n");
-					return 1;
-				}
-				else if (port_status == 0) {
-					printf("\nError: Input is too long for a port number! Please try again.\n");
-					continue;
-				}
-
-				char *endptr;
-				long val = strtol(port_buffer, &endptr, 10);
-
-				if (endptr != port_buffer && *endptr == '\0' && (val >= 1 && val <= 65535)) {
-					SERVER_PORT = (u_short)val;
-					port_valid = 1;
-					valid = 1;
-				}
-				else {
-					printf("\nError: Invalid port number! Must be an integer between 1 and 65535.\n");
-				}
+			if (port_ret == INPUT_CANCELED) {
+				return EXIT_FAILURE;
 			}
+			valid = 1;
 		}
 		else {
 			printf("Error: Unknown command. Please press Enter or type 'custom'.\n\n");
@@ -421,7 +375,6 @@ int main(void) {
 		OutputDebugStringW(errorLog);
 	}
 
-
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
@@ -432,4 +385,75 @@ int main(void) {
 
 	closesocket(sock);
 	WSACleanup();
+
+	return EXIT_SUCCESS;
+}
+
+int get_string(char *buffer, int max_len) {
+	if (fgets(buffer, max_len, stdin) == NULL) {
+		return INPUT_CANCELED;
+	}
+
+	if (strchr(buffer, '\n') == NULL) {
+		int c;
+		while ((c = getchar()) != '\n' && c != EOF);
+		return INPUT_TOO_LONG;
+	}
+
+	buffer[strcspn(buffer, "\n")] = '\0';
+	return INPUT_SUCCESS;
+}
+
+int get_custom_ip(char *ip) {
+	while (1) {
+		printf("\nEnter IP Address: ");
+
+		int ip_status = get_string(ip, IP_LEN);
+
+		if (ip_status == INPUT_CANCELED) {
+			printf("\nInput canceled. Exiting...\n");
+			return INPUT_CANCELED;
+		}
+		else if (ip_status == INPUT_TOO_LONG) {
+			printf("\nError: Input is too long for an IP address! Please try again.\n");
+			continue;
+		}
+
+		struct in_addr sa;
+		if (inet_pton(AF_INET, ip, &sa) == 1) {
+			return INPUT_SUCCESS;
+		}
+		else {
+			printf("\nError: Invalid IP address format! Please try again.");
+		}
+	}
+}
+
+int get_custom_port(u_short *port) {
+	char port_buffer[PORT_BUFFER_LEN];
+	while (1) {
+		printf("Enter Port (1-65535): ");
+
+		int port_status = get_string(port_buffer, sizeof(port_buffer));
+
+		if (port_status == INPUT_CANCELED) {
+			printf("\nInput canceled. Exiting...\n");
+			return INPUT_CANCELED;
+		}
+		else if (port_status == INPUT_TOO_LONG) {
+			printf("\nError: Input is too long for a port number! Please try again.\n");
+			continue;
+		}
+
+		char *endptr;
+		long val = strtol(port_buffer, &endptr, 10);
+
+		if (endptr != port_buffer && *endptr == '\0' && (val >= 1 && val <= 65535)) {
+			*port = (u_short)val;
+			return INPUT_SUCCESS;
+		}
+		else {
+			printf("\nError: Invalid port number! Must be an integer between 1 and 65535.\n");
+		}
+	}
 }
