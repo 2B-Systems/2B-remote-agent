@@ -36,14 +36,18 @@ Bu altyapı, TCP bağlantıları üzerinden alt seviye sistem olaylarını yakal
 ### Python Sunucusu (`asyncio`)
 
 * **Eşzamanlılık:** `asyncio.start_server` kullanan eşzamansız TCP dinleyicisi.
-* **Telemetri Alımı:** Gelen telemetri akışlarını çözer ve zaman damgalarını kaydeder.
-* **Günlükleme (Logging):** `aiofiles` aracılığıyla yönetilen, istemciye özel yapılandırılmış dosya çıktısı.
+* **Yapılandırma:** `127.0.0.1:8080` varsayılanlarıyla etkileşimli IPv4/IPv6 ve port doğrulaması.
+* **Telemetri Alımı:** Yeni satırla ayrılmış UTF-8 kayıtlarını okur ve ISO 8601 zaman damgaları ekler.
+* **Günlükleme (Logging):** Kayıtları `aiofiles` ile `server/logs/` altındaki bağlantıya özel dosyalara eşzamansız olarak ekler.
+* **Yaşam Döngüsü:** Bir istemci bağlantısında birden fazla kayıt alır; istemciyi ve dinleyiciyi düzenli biçimde kapatır.
 
 ### Telemetri Simülatörü
 
 C istemci ortamına ihtiyaç duymadan sunucuyu test etmek için geliştirilmiş bağımsız bir Python istemcisidir (`run_simulator.py`).
 
 * **Desteklenen Olaylar:** Kalp atışı (Heartbeat), CPU/Bellek/Disk/Ağ kullanımı, Süreç yaşam döngüsü, Servis durumu, Sistem sağlığı (sıcaklık, pil) ve hata günlükleri.
+* **Bağlantı Davranışı:** Önce simülatör kullanıcı adını, ardından yeni satırla ayrılmış telemetri kayıtlarını tek ve kalıcı bir bağlantı üzerinden gönderir.
+* **Mesaj Gecikmesi:** Mesajları aralıksız gönderebilir veya mesajlar arasında rastgele bir süre bekleyebilir.
 
 ---
 
@@ -59,13 +63,15 @@ C istemci ortamına ihtiyaç duymadan sunucuyu test etmek için geliştirilmiş 
 │   ├── src/
 │   │   ├── tests/
 │   │   │   └── client_simulator.py
-│   │   ├── config_setup.py
-│   │   ├── default_config.py
-│   │   └── server.py
+│   │   ├── server.py
+│   │   ├── server_client_connection.py
+│   │   └── server_config.py
+│   ├── logs/                 # Üretilen bağlantı günlükleri (Git tarafından yok sayılır)
 │   ├── requirements.txt
 │   ├── run_server.py
 │   └── run_simulator.py
-└── README.md
+├── README.md
+└── README.tr.md
 
 ```
 
@@ -76,7 +82,7 @@ C istemci ortamına ihtiyaç duymadan sunucuyu test etmek için geliştirilmiş 
 ### Önkoşullar
 
 * **İstemci:** Windows İşletim Sistemi, Win32 ve Winsock desteğine sahip C derleyicisi (`ws2_32.lib`).
-* **Sunucu:** Python 3.8+ ve `aiofiles` kütüphanesi.
+* **Sunucu:** Python 3.10+ ve `aiofiles` kütüphanesi.
 
 ### 1. Sunucuyu Çalıştırma
 
@@ -88,6 +94,8 @@ python run_server.py
 ```
 
 *Boş bırakılırsa varsayılan olarak `127.0.0.1:8080` kullanılır.*
+
+Alınan kayıtlar `server/logs/` dizinine yazılır. Günlük dosyası adlarında istemcinin güvenli hâle getirilmiş IP adresi ve kaynak portu kullanılır.
 
 ### 2. Telemetri Simülatörünü Çalıştırma (İsteğe Bağlı)
 
@@ -115,7 +123,7 @@ Bu sürüm henüz erken aşamada bir araştırma prototipidir. Bilinen sınırla
 
 * **Şifreleme Yok:** Veri iletimi şifresiz düz metin (plaintext) olarak yapılır (TLS/SSL bulunmamaktadır).
 * **Kimlik Doğrulama Yok:** İstemci bağlantıları için kimlik doğrulama veya jeton (token) değişimi yoktur.
-* **Çerçevelenmemiş Protokoller:** Uygulama katmanında resmi bir mesaj çerçeveleme (framing) ve teslimat doğrulama mekanizması yoktur.
+* **Asgari Çerçeveleme:** Kayıtlar yeni satırlarla ayrılır; ancak protokolde uzunluk öneki, şema doğrulaması, bütünlük kontrolü veya teslimat doğrulaması yoktur.
 
 ---
 

@@ -38,14 +38,18 @@ The framework provides low-level system event capture and telemetry ingestion ov
 ### Python Server (`asyncio`)
 
 - **Concurrency:** Asynchronous TCP listener using `asyncio.start_server`.
-- **Telemetry Ingestion:** Decodes incoming telemetry streams and records timestamps.
-- **Logging:** Structured per-client file output managed via `aiofiles`.
+- **Configuration:** Interactive IPv4/IPv6 and port validation with defaults of `127.0.0.1:8080`.
+- **Telemetry Ingestion:** Reads newline-delimited UTF-8 records and adds ISO 8601 timestamps.
+- **Logging:** Appends records asynchronously with `aiofiles` to connection-specific files under `server/logs/`.
+- **Lifecycle:** Keeps client connections open for multiple records and closes clients and the listener cleanly.
 
 ### Telemetry Simulator
 
 A standalone Python client (`run_simulator.py`) for server testing without requiring the C client runtime.
 
 - **Supported Events:** Heartbeats, CPU/Memory/Disk/Network utilization, Process lifecycle, Service status, System health (temperature, battery), and error logging.
+- **Connection Behavior:** Sends an initial simulator username followed by newline-delimited telemetry over one persistent connection.
+- **Message Delay:** Can send continuously or wait a random interval between messages.
 
 * * *
 
@@ -61,13 +65,15 @@ A standalone Python client (`run_simulator.py`) for server testing without requi
 │   ├── src/
 │   │   ├── tests/
 │   │   │   └── client_simulator.py
-│   │   ├── config_setup.py
-│   │   ├── default_config.py
-│   │   └── server.py
+│   │   ├── server.py
+│   │   ├── server_client_connection.py
+│   │   └── server_config.py
+│   ├── logs/                 # Generated per-connection logs (ignored by Git)
 │   ├── requirements.txt
 │   ├── run_server.py
 │   └── run_simulator.py
-└── README.md
+├── README.md
+└── README.tr.md
 
 ```
 
@@ -78,7 +84,7 @@ A standalone Python client (`run_simulator.py`) for server testing without requi
 ### Prerequisites
 
 - **Client:** Windows OS, C compiler with Win32 and Winsock support (`ws2_32.lib`).
-- **Server:** Python 3.8+ with `aiofiles`.
+- **Server:** Python 3.10+ with `aiofiles`.
 
 ### 1\. Run Server
 
@@ -90,6 +96,8 @@ python run_server.py
 ```
 
 *Prompt defaults to `127.0.0.1:8080` if left blank.*
+
+Received records are written to `server/logs/`. Log filenames use the client's sanitized IP address and source port.
 
 ### 2\. Run Telemetry Simulator (Optional)
 
@@ -117,7 +125,7 @@ The current release is an early-stage research prototype. Known limitations incl
 
 - **No Encryption:** Transmission is unencrypted plaintext (no TLS/SSL).
 - **No Authentication:** Lacks identity verification or token exchange for client connections.
-- **Unframed Protocols:** Lacks formal application-layer message framing and delivery verification.
+- **Minimal Framing:** Newlines delimit records, but the protocol has no length prefix, schema validation, integrity check, or delivery verification.
 
 * * *
 

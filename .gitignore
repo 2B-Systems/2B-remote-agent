@@ -1,11 +1,16 @@
-server/src/logs/
-server/src/__pycache__
-server/src/tests/__pycache__
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+
+# Runtime logs
+*.log
+server/logs/
+
+# VS Code
 .vscode/*
 !.vscode/settings.json
 !.vscode/launch.json
 !.vscode/extensions.json
-server/src/events.log
-server/__pycache__/run_server.cpython-313.pyc
-server/src/server.py
-server/logs/('127.0.0.1', 38984).log
