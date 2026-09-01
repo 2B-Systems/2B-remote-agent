@@ -1,75 +1,56 @@
 import asyncio
-import datetime
 import pathlib
-import aiofiles
+from src.server_client_connection import ServerClientConnection
 
 
-# client coroutine
-async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+class Server:
 
-    # get the client address
-    CLIENT_ADDRESS = writer.get_extra_info("peername")
-    CLIENT_IP, CLIENT_PORT = CLIENT_ADDRESS
+    def __init__(
+        self, server_ip: str, server_port: int, logs_folder: pathlib.Path
+    ) -> None:
+        # server initialization
+        self.server_ip = server_ip
+        self.server_port = server_port
+        self.logs_folder = logs_folder
+        self.server: asyncio.AbstractServer | None = None
 
-    print(f"Client successfully connected.\nClient Address: {CLIENT_ADDRESS}")
+    async def handle_client(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        client = ServerClientConnection(reader, writer)
 
-    # log folder operations
-    current_folder = pathlib.Path(__file__).resolve().parent
-    logs_folder = current_folder.parent / "logs"
+        try:
+            client.get_client_address()
 
-    logs_folder.mkdir(parents=True, exist_ok=True)
+            # receive and save newline-delimited records until the client disconnects
+            while True:
+                returned_record = await client.receive_record()
+                if returned_record is None:
+                    break
+                await client.save_records_to_file(self.logs_folder, returned_record)
+                print(returned_record)
 
-    print('Creating "logs" folder, skipping if it exists.')
+        finally:
+            await client.close()
 
-    client_identifier = client_identifier = f"{CLIENT_IP}_{CLIENT_PORT}"
-
-    # get values /w record
-    while True:
-
-        client_bytes = await reader.read(1024)
-
-        if not client_bytes:
-            print("Client disconnected.")
-            break
-
-        bytes_received_w_record = {
-            "time": str(datetime.datetime.now())[0:-7],
-            "client_message": client_bytes.decode(),
-        }
-
-        current_byte_time, current_byte_message = (
-            bytes_received_w_record["time"],
-            bytes_received_w_record["client_message"],
+    async def initialize(self) -> None:
+        # create the runtime logs folder before accepting client connections
+        self.logs_folder.mkdir(parents=True, exist_ok=True)
+        self.server = await asyncio.start_server(
+            self.handle_client, self.server_ip, self.server_port
         )
 
-        # save to file
-        information_to_save_to_file = f"[{bytes_received_w_record['time']}] Client Message: {bytes_received_w_record['client_message']}"
+    async def serve(self) -> None:
+        if self.server is None:
+            raise RuntimeError("Server must be initialized before serving.\n")
 
-        if current_byte_message.lower().startswith("username:"):
-            client_username = current_byte_message.split(":", 1)[1].strip()
+        await self.server.serve_forever()
 
-            if client_username:
-                client_identifier = client_username
+    async def close(self) -> None:
+        if self.server is None:
+            return
 
-        log_path = logs_folder / f"{client_identifier}.log"
-
-        async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
-            await log_file.write(information_to_save_to_file)
-
-        print(information_to_save_to_file)
-
-    # close connection
-    writer.close()
-    await writer.wait_closed()
-
-
-async def main(server_ip: str, server_port: int) -> None:
-    # server init
-    server = await asyncio.start_server(handle_client, server_ip, server_port)
-
-    print(f"Server is listening to {server_ip}:{server_port}")
-
-    await server.serve_forever()
-
-    server.close()
-    await server.wait_closed()
+        self.server.close()
+        await self.server.wait_closed()
