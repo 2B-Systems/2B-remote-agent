@@ -30,10 +30,15 @@ int main(void) {
         goto cleanup;
     }
 
-    if (send_username_to_server(sock) == EXIT_SUCCESS) {
-        run_message_loop();
-        exit_status = EXIT_SUCCESS;
-    }
+    send_username_to_server(sock);
+    send_fqdn_to_server(sock);
+    send_os_version_to_server(sock);
+    send_os_architecture_to_server(sock);
+    send_uptime_to_server(sock);
+    send_boot_time_to_server(sock);
+
+    run_message_loop();
+    exit_status = EXIT_SUCCESS;
 
 cleanup:
     if (sock != INVALID_SOCKET) {
