@@ -15,7 +15,8 @@
 #pragma comment(lib, "ws2_32.lib")
 
 // Custom Headers
-
+#include "cJSON.h"
 #include "utils.h"
-#include "get-user-info.h"
+#include "info-sender.h"
 #include "keyboard.h"
+#include "os.h"

