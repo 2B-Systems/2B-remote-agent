@@ -96,7 +96,7 @@ Log files are named `<sanitized-client-IP>_<source-port>.log`. A new connection 
 | `server/src/tests/client_simulator.py` | Simulator connection and message logic |
 | `server/requirements.txt` | Python dependency (`aiofiles`) |
 | `server/logs/` | Generated connection logs |
-| `README.md`, `README.tr.md` | English and Turkish documentation |
+| `README.md` | English documentation |
 
 ## Getting Started
 
